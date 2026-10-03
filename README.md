@@ -1,3 +1,2 @@
 Testing the protection rules
 Testing PR concept
-Half-finished thought...
