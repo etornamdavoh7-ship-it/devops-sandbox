@@ -32,4 +32,24 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
 
 ---
 
+### Issue: GH006 Protected Branch Update Failed
+- **Scenario:** The Junior developer attempted to push a commit directly to the `main` branch.
+- **Error Message:** 
+  `remote: error: GH006: Protected branch update failed for refs/heads/main.`
+  `remote: - Changes must be made through a pull request.`
+  `! [remote rejected] main -> main (protected branch hook declined)`
+- **Root Cause:** The GitHub repository has Branch Protection rules enabled that strictly forbid direct pushes to `main` and require all code to go through a Pull Request.
+- **Solution:** 
+  ```bash
+  # 1. Move the commit to a new feature branch
+  git checkout -b feature/update-readme
+  
+  # 2. Push the new branch to GitHub
+  git push -u origin feature/update-readme
+  
+  # 3. Create a Pull Request on GitHub.com
+  ```
+
+---
+
 *(Future issues will be appended below this line)*
