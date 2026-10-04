@@ -72,3 +72,48 @@ When building advanced pipelines, always refer to the official documentation for
 * [Gitleaks Action](https://github.com/gitleaks/gitleaks-action)
 * [Docker Buildx Action](https://github.com/docker/setup-buildx-action)
 * [Trivy Action](https://github.com/aquasecurity/trivy-action)
+
+
+## Advanced Reference: E2E Integration Testing (Service Containers)
+When you move to a real project that has automated test scripts (like Jest or Cypress), you will want to test the database connection *before* building the Docker image. 
+
+Instead of connecting to a real production database, you can use **GitHub Service Containers** to spin up a temporary, throwaway database directly inside the runner. 
+
+If you need this in the future, insert this job into your `ci.yml` between the Secret Scan and the Docker Build:
+
+```yaml
+  integration-test:
+    name: E2E Database Integration Test
+    runs-on: ubuntu-latest
+    needs: security-scan
+    
+    # Spin up a temporary, throwaway MongoDB container inside GitHub
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd server
+          npm ci
+
+      - name: Run E2E Tests against temporary DB
+        env:
+          # Fake connection string injected ONLY for this temporary runner DB
+          MONGO_URI: mongodb://localhost:27017/temporary_test_db
+        run: |
+          cd server
+          npm test
+```
+*(Remember to update the `build-and-scan` job to `needs: integration-test` so it waits for the tests to pass!)*
