@@ -53,3 +53,9 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
 ---
 
 *(Future issues will be appended below this line)*
+
+
+### Issue 3: GitHub Actions `docker-compose: command not found` (Exit Code 127)
+* **Scenario:** When running the CI pipeline on the `ubuntu-latest` runner, the step fails attempting to build the application.
+* **Root Cause:** The pipeline YAML used the outdated Docker Version 1 syntax (`docker-compose` with a hyphen), which was a standalone program. Modern Linux servers use Docker Version 2, which integrated compose directly into the main docker executable.
+* **Solution:** Remove the hyphen in the YAML file. Change the command from `run: docker-compose build` to `run: docker compose build`.
