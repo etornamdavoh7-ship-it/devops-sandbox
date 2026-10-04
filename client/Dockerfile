@@ -15,7 +15,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 4. Download all the heavy React development tools
-RUN npm install
+RUN npm ci
 
 # 5. Copy the actual React source code
 COPY . .

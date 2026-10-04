@@ -1,6 +1,7 @@
 services:
   backend-api:
     build: ./server
+    image: devops-sandbox-backend:local
     restart: always
     ports:
       - "5000:5000"
@@ -21,6 +22,7 @@ services:
       context: ./client
       args:
         - VITE_API_URL=http://localhost:5000/api
+    image: devops-sandbox-frontend:local
     ports:
       - "3000:80"
     depends_on:

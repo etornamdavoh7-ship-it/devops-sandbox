@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 4. THE INSTALL: Read the package.json and download the required software.
-RUN npm install
+RUN npm ci
 
 # 5. THE CODE: Copy our actual written code from our laptop into the container.
 # (The .dockerignore file ensures we don't accidentally copy our laptop's node_modules).
