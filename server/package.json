@@ -16,5 +16,12 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "overrides": {
+    "chokidar": {
+      "braces": "^3.0.3"
+    },
+    "picomatch": "^4.0.4",
+    "sigstore": "^4.1.1"
   }
 }
