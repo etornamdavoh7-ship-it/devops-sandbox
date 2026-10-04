@@ -8,7 +8,7 @@ WORKDIR /app
 # (We do this separately to take advantage of Docker Layer Caching).
 COPY package*.json ./
 
-RUN npm install -g npm@latest
+RUN npm install -g npm@10
 
 # 4. THE INSTALL: Read the package.json and download the required software.
 RUN npm ci --omit=dev
