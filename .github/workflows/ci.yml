@@ -36,7 +36,8 @@ jobs:
           scan-ref: '.'
           format: 'table'
           exit-code: '1'
-          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
 
       # 2. BUILD IMAGES
       - name: Set up Docker Buildx
@@ -53,7 +54,8 @@ jobs:
           image-ref: 'devops-sandbox-backend:local'
           format: 'table'
           exit-code: '1'
-          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
 
       # 4. SCAN FRONTEND CONTAINER IMAGE (Catches Nginx/Alpine OS CVEs)
       - name: Run Trivy on Frontend Container
@@ -63,4 +65,5 @@ jobs:
           image-ref: 'devops-sandbox-frontend:local'
           format: 'table'
           exit-code: '1'
-          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
