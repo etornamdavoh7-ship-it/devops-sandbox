@@ -8,8 +8,10 @@ WORKDIR /app
 # (We do this separately to take advantage of Docker Layer Caching).
 COPY package*.json ./
 
+RUN npm install -g npm@latest
+
 # 4. THE INSTALL: Read the package.json and download the required software.
-RUN npm ci
+RUN npm ci --omit=dev
 
 # 5. THE CODE: Copy our actual written code from our laptop into the container.
 # (The .dockerignore file ensures we don't accidentally copy our laptop's node_modules).
