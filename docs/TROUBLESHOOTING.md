@@ -59,3 +59,22 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
 * **Scenario:** When running the CI pipeline on the `ubuntu-latest` runner, the step fails attempting to build the application.
 * **Root Cause:** The pipeline YAML used the outdated Docker Version 1 syntax (`docker-compose` with a hyphen), which was a standalone program. Modern Linux servers use Docker Version 2, which integrated compose directly into the main docker executable.
 * **Solution:** Remove the hyphen in the YAML file. Change the command from `run: docker-compose build` to `run: docker compose build`.
+
+---
+
+### Issue 4: Terraform 409 Conflict (EntityAlreadyExists) for OIDC Provider
+- **Scenario:** Running `terraform apply` to create an AWS IAM OpenID Connect (OIDC) provider for GitHub Actions in a new repository.
+- **Error Message:** 
+  `Error: creating IAM OIDC Provider: operation error IAM: CreateOpenIDConnectProvider, https response error StatusCode: 409, EntityAlreadyExists: Provider with url https://token.actions.githubusercontent.com already exists.`
+- **Root Cause:** An AWS account can only have exactly **one** OIDC Provider for GitHub Actions. A previous project (e.g., OpsTicket) already created it. Furthermore, if you copy-paste the `resource "aws_iam_openid_connect_provider"` into multiple Terraform projects, you create a dangerous "Split-Brain" state where destroying one project will delete the OIDC provider and break all other projects relying on it.
+- **Solution:** 
+  Use a `data` block instead of a `resource` block to look up the existing provider, making the original project the sole "owner" of the infrastructure:
+  ```terraform
+  # Replace 'resource' with 'data'
+  data "aws_iam_openid_connect_provider" "github" {
+    url = "https://token.actions.githubusercontent.com"
+  }
+  
+  # Ensure your IAM Role Trust Policy references the data block:
+  # identifiers = [data.aws_iam_openid_connect_provider.github.arn]
+  ```
