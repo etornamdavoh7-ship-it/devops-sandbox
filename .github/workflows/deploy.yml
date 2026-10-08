@@ -1,0 +1,77 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+# Required for AWS OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::308916794074:role/github-actions-role
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # ==========================================
+      # PHASE 1: THE CONSTRUCTION CREW
+      # ==========================================
+      - name: Terraform Init & Apply
+        working-directory: ./terraform-app
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
+      # ==========================================
+      # PHASE 2: THE HAND-OFF
+      # Extract values from Terraform to give to Docker
+      # ==========================================
+      - name: Export Terraform Outputs
+        working-directory: ./terraform-app
+        run: |
+          echo "ALB_URL=$(terraform output -raw alb_dns_name)" >> $GITHUB_ENV
+          echo "FRONTEND_ECR=$(terraform output -raw frontend_ecr_repository_url)" >> $GITHUB_ENV
+          echo "BACKEND_ECR=$(terraform output -raw backend_ecr_repository_url)" >> $GITHUB_ENV
+          echo "CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_ENV
+          echo "FRONTEND_SVC=$(terraform output -raw ecs_frontend_service_name)" >> $GITHUB_ENV
+          echo "BACKEND_SVC=$(terraform output -raw ecs_backend_service_name)" >> $GITHUB_ENV
+
+      # ==========================================
+      # PHASE 3: THE MOVING COMPANY (DOCKER)
+      # ==========================================
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Backend
+        run: |
+          docker build -t ${{ env.BACKEND_ECR }}:latest ./server
+          docker push ${{ env.BACKEND_ECR }}:latest
+
+      - name: Build and Push Frontend
+        # Here we inject the ALB URL securely at build-time!
+        run: |
+          docker build --build-arg VITE_API_URL=http://${{ env.ALB_URL }}/api -t ${{ env.FRONTEND_ECR }}:latest ./client
+          docker push ${{ env.FRONTEND_ECR }}:latest
+
+      # ==========================================
+      # PHASE 4: THE EXECUTION
+      # ==========================================
+      - name: Deploy to ECS
+        # Force ECS to pull the latest images we just pushed and restart the containers
+        run: |
+          aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.BACKEND_SVC }} --force-new-deployment
+          aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.FRONTEND_SVC }} --force-new-deployment

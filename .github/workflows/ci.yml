@@ -32,12 +32,12 @@ jobs:
       - name: Run Trivy Filesystem Scan
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          exit-code: '1'
+          scan-type: "fs"
+          scan-ref: "."
+          format: "table"
+          exit-code: "1"
           ignore-unfixed: true
-          severity: 'CRITICAL'
+          severity: "CRITICAL"
 
       # 2. BUILD IMAGES
       - name: Set up Docker Buildx
@@ -50,20 +50,61 @@ jobs:
       - name: Run Trivy on Backend Container
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'image'
-          image-ref: 'devops-sandbox-backend:local'
-          format: 'table'
-          exit-code: '1'
+          scan-type: "image"
+          image-ref: "devops-sandbox-backend:local"
+          format: "table"
+          exit-code: "1"
           ignore-unfixed: true
-          severity: 'CRITICAL'
+          severity: "CRITICAL"
 
       # 4. SCAN FRONTEND CONTAINER IMAGE (Catches Nginx/Alpine OS CVEs)
       - name: Run Trivy on Frontend Container
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'image'
-          image-ref: 'devops-sandbox-frontend:local'
-          format: 'table'
-          exit-code: '1'
+          scan-type: "image"
+          image-ref: "devops-sandbox-frontend:local"
+          format: "table"
+          exit-code: "1"
           ignore-unfixed: true
-          severity: 'CRITICAL'
+          severity: "CRITICAL"
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    # This block is REQUIRED for password-less OIDC authentication
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+        # 1. THE AUTHENTICATION
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::308916794074:role/github-actions-role
+          aws-region: us-east-1
+
+      # 2. INSTALL TERRAFORM ON THE GITHUB RUNNER
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+          # 3. RUN COMMANDS
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform-app
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        working-directory: ./terraform-app
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./terraform-app
+
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: ./terraform-app

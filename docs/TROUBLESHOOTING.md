@@ -78,3 +78,17 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
   # Ensure your IAM Role Trust Policy references the data block:
   # identifiers = [data.aws_iam_openid_connect_provider.github.arn]
   ```
+
+
+### Error: Could not assume role with OIDC (Not authorized to perform sts:AssumeRoleWithWebIdentity)
+**Symptom:** GitHub Actions fails during the "Configure AWS Credentials" step.
+**Cause:** AWS IAM String matching is strictly case-sensitive. If your GitHub repository has capital letters or is triggered from a fork with a different name, the token's `sub` claim will not match the IAM Trust Policy's exact string.
+**Fix:** Update `terraform-bootstrap/oidc.tf` to use a wildcard `*` at the end of the GitHub account name (e.g., `repo:etornamdavoh7-ship-it/*`) and re-apply the bootstrap layer locally.
+
+### Error: Terraform Plan Fails with Multiple AWS AccessDenied Errors
+**Symptom:** Running `terraform plan` locally results in a wall of red text with errors like:
+- `operation error IAM: ListOpenIDConnectProviders, https response error StatusCode: 403`
+- `operation error S3: GetBucketVersioning... api error AccessDenied`
+- `operation error DynamoDB: DescribeTable... api error AccessDeniedException`
+**Cause:** You forgot to export your AWS credentials (e.g., via an STS profile) before running the command. Many people mistakenly believe `terraform plan` only runs locally against `.tf` files. In reality, `terraform plan` initiates a "refresh" phase that reaches out to the actual AWS APIs to verify the state of existing resources, read the remote `.tfstate` from S3, and check for locks in DynamoDB.
+**Fix:** Export your AWS credentials (or STS profile) in your terminal session before running Terraform commands.
