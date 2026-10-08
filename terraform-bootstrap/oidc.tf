@@ -23,7 +23,7 @@ data "aws_iam_policy_document" "github_actions_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:etornamdavoh7-ship-it/devops-sandbox:*"]
+      values   = ["repo:etornamdavoh7-ship-it/*"]
     }
   }
 }
