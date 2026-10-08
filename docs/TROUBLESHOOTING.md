@@ -82,8 +82,8 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
 
 ### Error: Could not assume role with OIDC (Not authorized to perform sts:AssumeRoleWithWebIdentity)
 **Symptom:** GitHub Actions fails during the "Configure AWS Credentials" step.
-**Cause:** AWS IAM `StringLike` matching is strictly case-sensitive, and unfortunately, AWS does *not* support a `StringLikeIgnoreCase` condition. If your GitHub repository was created with any capital letters (e.g., `Etornamdavoh7-ship-it`), the OIDC token's `sub` claim will contain those capital letters and fail to match your all-lowercase Terraform string.
-**Fix:** Update `terraform-bootstrap/oidc.tf` to use `StringLike` but provide an array of strings covering both the exact lowercase and capitalized variations (e.g., `values = ["repo:org/*", "repo:Org/*"]`). Then re-apply the bootstrap layer locally.
+**Cause:** Our AWS IAM `StringLike` condition was looking for a standard GitHub repository string (e.g., `repo:org/repo-name/*`). However, GitHub had Custom OIDC Subject Claims enabled, which injects unique repository and owner IDs into the token (e.g., `repo:org@12345/repo-name@67890`). This caused the string match to fail, blocking access.
+**Fix:** Navigate to your GitHub Repository Settings -> Actions -> General (or OIDC settings) to find the exact "Default subject claim prefix". Update `terraform-bootstrap/oidc.tf` to match that exact string (e.g., `values = ["repo:org@12345/repo-name@67890:*"]`) and re-apply locally.
 
 ### Error: Terraform Plan Fails with Multiple AWS AccessDenied Errors
 **Symptom:** Running `terraform plan` locally results in a wall of red text with errors like:
