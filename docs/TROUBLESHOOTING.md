@@ -82,8 +82,8 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
 
 ### Error: Could not assume role with OIDC (Not authorized to perform sts:AssumeRoleWithWebIdentity)
 **Symptom:** GitHub Actions fails during the "Configure AWS Credentials" step.
-**Cause:** AWS IAM String matching is strictly case-sensitive. If your GitHub repository has capital letters or is triggered from a fork with a different name, the token's `sub` claim will not match the IAM Trust Policy's exact string.
-**Fix:** Update `terraform-bootstrap/oidc.tf` to use a wildcard `*` at the end of the GitHub account name (e.g., `repo:etornamdavoh7-ship-it/*`) and re-apply the bootstrap layer locally.
+**Cause:** AWS IAM `StringLike` matching is strictly case-sensitive, and unfortunately, AWS does *not* support a `StringLikeIgnoreCase` condition. If your GitHub repository was created with any capital letters (e.g., `Etornamdavoh7-ship-it`), the OIDC token's `sub` claim will contain those capital letters and fail to match your all-lowercase Terraform string.
+**Fix:** Update `terraform-bootstrap/oidc.tf` to use `StringLike` but provide an array of strings covering both the exact lowercase and capitalized variations (e.g., `values = ["repo:org/*", "repo:Org/*"]`). Then re-apply the bootstrap layer locally.
 
 ### Error: Terraform Plan Fails with Multiple AWS AccessDenied Errors
 **Symptom:** Running `terraform plan` locally results in a wall of red text with errors like:
@@ -92,3 +92,11 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
 - `operation error DynamoDB: DescribeTable... api error AccessDeniedException`
 **Cause:** You forgot to export your AWS credentials (e.g., via an STS profile) before running the command. Many people mistakenly believe `terraform plan` only runs locally against `.tf` files. In reality, `terraform plan` initiates a "refresh" phase that reaches out to the actual AWS APIs to verify the state of existing resources, read the remote `.tfstate` from S3, and check for locks in DynamoDB.
 **Fix:** Export your AWS credentials (or STS profile) in your terminal session before running Terraform commands.
+
+
+### Error: ALB Returns 503 Service Temporarily Unavailable
+**Symptom:** After deploying the infrastructure and visiting the Application Load Balancer (ALB) URL in the browser, the page returns a `503 Service Temporarily Unavailable` error.
+**Cause:** A 503 error from an ALB means there are no healthy targets (containers) in the Target Group to receive the traffic. This happened because we initially set `desired_count = 0` in our Terraform ECS configuration to prevent an infinite creation loop before our CI/CD pipeline built and pushed the Docker images to ECR. Running `aws ecs update-service --force-new-deployment` in the pipeline pulled the new images but *did not* change the desired count, leaving 0 containers running.
+**Fix:** 
+1. Update `desired_count = 1` in your Terraform ECS service definitions (`ecs.tf`).
+2. Push the changes to trigger the CI/CD pipeline, which will run `terraform apply` and scale the services up to 1 running container.

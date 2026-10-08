@@ -48,7 +48,7 @@ resource "aws_ecs_service" "backend" {
   cluster         = aws_ecs_cluster.devops_sandbox_cluster.id
   launch_type     = "FARGATE"
   task_definition = aws_ecs_task_definition.backend.arn
-  desired_count   = 0
+  desired_count   = 1
 
   network_configuration {
     subnets = [
