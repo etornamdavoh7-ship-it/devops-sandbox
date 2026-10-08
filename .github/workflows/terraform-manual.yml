@@ -1,0 +1,56 @@
+name: Manual Terraform Operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+# Required for AWS OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform-ops:
+    name: Terraform ${{ github.event.inputs.action }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::308916794074:role/github-actions-role
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform-app
+
+      - name: Terraform Plan
+        if: github.event.inputs.action == 'plan'
+        run: terraform plan
+        working-directory: ./terraform-app
+
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply'
+        run: terraform apply -auto-approve
+        working-directory: ./terraform-app
+
+      # 🚨 WARNING: This will tear down your entire AWS App infrastructure
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
+        working-directory: ./terraform-app
