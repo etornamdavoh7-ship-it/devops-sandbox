@@ -1,0 +1,10 @@
+# THE PHONEBOOK: Tells Prometheus who to talk to
+global:
+  # How often to collect data (5s is for our lab; 1m is standard for production to save disk space)
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "devops-sandbox-backend"
+    static_configs:
+      # We use the internal Docker network DNS ('backend-api') to bypass the host machine entirely
+      - targets: ["backend-api:5000"]

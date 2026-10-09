@@ -100,3 +100,8 @@ This document serves as our "Break & Fix" ledger. Every time we encounter an err
 **Fix:** 
 1. Update `desired_count = 1` in your Terraform ECS service definitions (`ecs.tf`).
 2. Push the changes to trigger the CI/CD pipeline, which will run `terraform apply` and scale the services up to 1 running container.
+
+### Error: FATAL ARCHITECTURE ERROR: MONGO_URI is not defined!
+**Scenario:** Running `npm run dev` locally to test the Node.js API after adding Prometheus instrumentation.
+**Cause:** We attempted to run the server directly on the host machine using Node/Nodemon. However, the application is designed for a containerized environment (Docker Compose), where environment variables like `MONGO_URI` are injected automatically. Because we ran it locally outside of Docker, the `.env` variables were missing, and our custom "Fail-Fast" architecture rule executed exactly as designed: it killed the process to prevent the app from booting without a data tier.
+**Fix:** To fix this, run the application via Docker Compose (`docker compose up`), or create a local `.env` file containing the necessary connection strings for local testing.
