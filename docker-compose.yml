@@ -27,3 +27,31 @@ services:
       - "3000:80"
     depends_on:
       - backend-api
+
+  # ==========================================
+  # MONITORING TIER: THE SCRAPER
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    # Mounts the local config file into the container
+    # Pro Tip: In the cloud (e.g. AWS ECS), we build a custom Docker image to bake this file in instead.
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - backend-api
+
+  # ==========================================
+  # MONITORING TIER: THE DASHBOARD
+  # ==========================================
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000" # Exposing on 3001 so it doesn't conflict with our React app
+    environment:
+      # SECURITY WARNING: Hardcoded for local lab bypass.
+      # Best Practice: Use ${GRAFANA_PASSWORD} from a .env file, or configure GitHub OAuth (SSO) in production.
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus

@@ -3,11 +3,25 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import resourceRoutes from "./routes/resources.js";
+import promClient from "prom-client";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// ==========================================
+// MONITORING: PROMETHEUS INSTRUMENTATION
+// ==========================================
+// 1. Track Infrastructure (CPU, RAM)
+promClient.collectDefaultMetrics();
+
+// 2. Create a custom tracker for Application Traffic & Errors
+const httpRequestCounter = new promClient.Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
+});
 
 // ==========================================
 // STRATEGIC FIX 2: DYNAMIC CORS WHITELISTING
@@ -33,6 +47,18 @@ app.use(
 
 app.use(express.json());
 
+// 3. The Tripwire: Intercept all requests and record the metrics
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    httpRequestCounter.inc({
+      method: req.method,
+      route: req.path,
+      status_code: res.statusCode,
+    });
+  });
+  next();
+});
+
 // Test root route - MUST come before other routes
 app.get("/", (req, res) => {
   res.json({
@@ -43,6 +69,12 @@ app.get("/", (req, res) => {
       health: "/health",
     },
   });
+});
+
+// 4. The Scrape Endpoint: Where Prometheus comes to collect data
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", promClient.register.contentType);
+  res.end(await promClient.register.metrics());
 });
 
 // Health check route
